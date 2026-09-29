@@ -3,7 +3,7 @@ from openpyxl import load_workbook
 from io import BytesIO
 
 # ============================================================
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO
 # ============================================================
 
 st.set_page_config(
@@ -20,11 +20,11 @@ st.title("📦 Vindex — Preenchimento de Quantidades")
 
 st.write(
     "Envie a planilha Excel e clique em **Processar preenchimento**. "
-    "O sistema fará automaticamente o preenchimento na segunda aba da planilha."
+    "O sistema fará automaticamente o preenchimento da segunda aba."
 )
 
 # ============================================================
-# UPLOAD DA PLANILHA
+# UPLOAD
 # ============================================================
 
 uploaded_file = st.file_uploader(
@@ -51,7 +51,7 @@ if uploaded_file is not None:
         try:
 
             # ------------------------------------------------
-            # LER ARQUIVO
+            # ABRIR EXCEL
             # ------------------------------------------------
 
             file_bytes = uploaded_file.getvalue()
@@ -61,7 +61,7 @@ if uploaded_file is not None:
             )
 
             # ------------------------------------------------
-            # VERIFICAR SE EXISTE A SEGUNDA ABA
+            # VERIFICAR SEGUNDA ABA
             # ------------------------------------------------
 
             if len(wb.sheetnames) < 2:
@@ -79,24 +79,33 @@ if uploaded_file is not None:
             ws = wb[wb.sheetnames[1]]
 
             # ------------------------------------------------
-            # CONFIGURAÇÃO DAS COLUNAS
+            # CONFIGURAÇÃO
             # ------------------------------------------------
 
-            # Coluna J = quantidade prevista
+            # J = quantidade prevista
             COLUNA_QUANTIDADE = 10
 
-            # Coluna M = início do preenchimento
+            # M = primeira caixa
             COLUNA_INICIO = 13
 
             # ------------------------------------------------
-            # CONTADORES
+            # VARIÁVEIS
             # ------------------------------------------------
+
+            # Esta variável é MUITO importante.
+            #
+            # Ela controla a sequência das caixas para
+            # TODOS os produtos.
+            #
+            # Não reinicia em M a cada linha.
+
+            coluna_atual = COLUNA_INICIO
 
             total_produtos = 0
             total_unidades = 0
 
             # ------------------------------------------------
-            # PERCORRER TODAS AS LINHAS
+            # PERCORRER AS LINHAS
             # ------------------------------------------------
 
             for row in range(
@@ -104,7 +113,6 @@ if uploaded_file is not None:
                 ws.max_row + 1
             ):
 
-                # Pegar quantidade da coluna J
                 quantidade = ws.cell(
                     row=row,
                     column=COLUNA_QUANTIDADE
@@ -114,7 +122,7 @@ if uploaded_file is not None:
                 if quantidade is None:
                     continue
 
-                # Tentar converter para número
+                # Tentar transformar em número
                 try:
 
                     quantidade = int(
@@ -133,13 +141,30 @@ if uploaded_file is not None:
                     continue
 
                 # ------------------------------------------------
-                # PREENCHIMENTO
+                # LIMPAR O PREENCHIMENTO ANTERIOR DA LINHA
+                # ------------------------------------------------
+
+                # Isso evita que uma planilha que já tenha
+                # algum preenchimento fique com dados sobrando.
+
+                for coluna in range(
+                    COLUNA_INICIO,
+                    ws.max_column + 1
+                ):
+
+                    ws.cell(
+                        row=row,
+                        column=coluna
+                    ).value = None
+
+                # ------------------------------------------------
+                # PREENCHER AS UNIDADES
                 # ------------------------------------------------
 
                 for i in range(quantidade):
 
                     coluna_destino = (
-                        COLUNA_INICIO + i
+                        coluna_atual + i
                     )
 
                     ws.cell(
@@ -148,14 +173,16 @@ if uploaded_file is not None:
                     ).value = 1
 
                 # ------------------------------------------------
-                # ATUALIZAR CONTADORES
+                # AVANÇAR PARA O PRÓXIMO PRODUTO
                 # ------------------------------------------------
+
+                coluna_atual += quantidade
 
                 total_produtos += 1
                 total_unidades += quantidade
 
             # ====================================================
-            # GERAR NOVO ARQUIVO
+            # GERAR NOVO EXCEL
             # ====================================================
 
             output = BytesIO()
@@ -227,7 +254,7 @@ if uploaded_file is not None:
             )
 
 # ============================================================
-# MENSAGEM INICIAL
+# TELA INICIAL
 # ============================================================
 
 else:
